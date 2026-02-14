@@ -1,0 +1,9 @@
+.\output\osal.o: ..\..\Components\OSAL\OSAL.c
+.\output\osal.o: E:\TOOL\KEIL55\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\osal.o: E:\TOOL\KEIL55\ARM\ARMCC\Bin\..\include\string.h
+.\output\osal.o: E:\TOOL\KEIL55\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\osal.o: E:\TOOL\KEIL55\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\osal.o: ..\..\Components\OSAL\OSAL.h
+.\output\osal.o: E:\TOOL\KEIL55\ARM\ARMCC\Bin\..\include\stdbool.h
+.\output\osal.o: ..\..\Components\OSAL\OSAL_Comdef.h
+.\output\osal.o: E:\TOOL\KEIL55\ARM\ARMCC\Bin\..\include\stdint.h

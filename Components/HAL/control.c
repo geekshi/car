@@ -12,485 +12,505 @@ TOF_Distance TOF_D;
 AOA_DATA AVG={0};
 
 /**************************************************************************
-º¯ÊıÃû  £ºµ¥½Ç¶È´¦ÀíºËĞÄÂß¼­
-º¯Êı¹¦ÄÜ£º¹ıÂËµ¥¸ö²îÒì½Ï´óµÄ½Ç¶È
-Èë¿Ú²ÎÊı£ºcurrent_angle  ĞèÒª¹ıÂËµÄ½Ç¶È   last_angle    ÉÏÒ»´Î½Ç¶È
-          output_num     ³¬ÏŞ´ÎÊı         output_thresh ³¬ÏŞãĞÖµ
-          inverse_thresh ÒìÏò½Ç±ä»¯ãĞÖµ   same_thresh   Í¬Ïò½Ç±ä»¯ãĞÖµ
-·µ»Ø  Öµ£º¹ıÂË½Ç¶È 
-**************************************************************************/ 
+  Ç¶È´
+Ï´Ç¶
+Ú²current_angle  ÒªÄ½Ç¶   last_angle    Ò»Î½Ç¶
+          output_num              output_thresh
+          inverse_thresh Ç±ä»¯   same_thresh   Í¬Ç±ä»¯
+  ÖµÇ¶
+**************************************************************************/
 static void process_single_angle(int16_t* current_angle, int* last_angle,
-								int* output_num,uint8_t output_thresh,
-								int inverse_thresh, int same_thresh) {
-	int curr = *current_angle;
-	int last = *last_angle;
-	int outnum=*output_num;
-									
-	// ¼ÆËãÊµ¼Ê½Ç¶È²î£¨¿¼ÂÇÔ²ÖÜÌØĞÔ£©
-	int delta = curr - last;
+                                                                int* output_num,uint8_t output_thresh,
+                                                                int inverse_thresh, int same_thresh) {
+        int curr = *current_angle;
+        int last = *last_angle;
+        int outnum=*output_num;
 
-	// ÅĞ¶Ï½Ç¶È±ä»¯·½Ïò
-	int is_same_direction = (last * curr) >= 0;  // Í¬Ïò±êÖ¾
+        // Ê½Ç¶È²î£¨Ô²
+        int delta = curr - last;
 
-	// Ó¦ÓÃ¶¯Ì¬ãĞÖµ
-	int threshold = is_same_direction ? same_thresh : inverse_thresh;
+        // Ï½Ç¶È±ä»¯
+        int is_same_direction = (last * curr) >= 0;  // Í¬
 
-	// Ìø±ä³¬ÏŞ´¦Àí
-	if(delta == curr && last==0)//³õ´Î½øÈëÊ±
-	{//ÒòÎª current_angle ÓĞÊı¾İÊÇ ÊÇ²»Îª0µÄ£¬¹ÊÖ»ÓĞÔÚ²ÎÊıÔÚµÚÒ»´Î¿ªÊ¼ÂË²¨Ê±¡£
-	 //²Å»á´¥·¢¸ÃÌõ¼ş
-		*current_angle=curr; // ¸üĞÂÂË²¨Öµ
-		*last_angle = curr;  // ¸üĞÂÀúÊ·Öµ
-		*output_num=0;
-	}
-	else if(outnum>=output_thresh)//Á¬Ğø³¬ÏŞµÄÇé¿öÏÂ
-	{
-		*current_angle=curr; // ¸üĞÂÂË²¨Öµ
-		*last_angle = curr;  // ¸üĞÂÀúÊ·Öµ
-		*output_num=0;
-	}
-	else if(abs(delta) > threshold)//³¬¹ıãĞÖµ ²»Ê¹ÓÃ¸ÃÖµ
-	{
-		*current_angle = *last_angle;  // ±£³ÖÉÏ´ÎÓĞĞ§Öµ
-		(*output_num)++;
-	}
-	else //Î´³¬¹ıãĞÖµ Ê¹ÓÃ¸ÃÖµ
-	{
-		*current_angle=curr; // ¸üĞÂÂË²¨Öµ
-		*last_angle = curr;  // ¸üĞÂÀúÊ·Öµ
-	}
+        // Ó¦Ì¬
+        int threshold = is_same_direction ? same_thresh : inverse_thresh;
+
+        // ä³¬
+        if(delta == curr && last==0)//Î½Ê±
+        {//Îª current_angle  Îª0Ä£Î¿Ê¼Ê±
+         //Å»á´¥
+                *current_angle=curr; // Öµ
+                *last_angle = curr;  // Ê·Öµ
+                *output_num=0;
+        }
+        else if(outnum>=output_thresh)//
+        {
+                *current_angle=curr; // Öµ
+                *last_angle = curr;  // Ê·Öµ
+                *output_num=0;
+        }
+        else if(abs(delta) > threshold)// Ê¹
+        {
+                *current_angle = *last_angle;  // Ï´Öµ
+                (*output_num)++;
+        }
+        else //Î´ Ê¹
+        {
+                *current_angle=curr; // Öµ
+                *last_angle = curr;  // Ê·Öµ
+        }
 }
 
 /**************************************************************************
-º¯ÊıÃû  £ºAOA_Angle_Filter
-º¯Êı¹¦ÄÜ£º¹ıÂËËùÓĞ²îÒì½Ï´óµÄ½Ç¶È£¬ÎŞÊı¾İµÄ»ùÕ¾²»×öÂË²¨
-Èë¿Ú²ÎÊı£ºAVG ĞèÒª¹ıÂËµÄ½á¹¹Ìå   
-          inverse_thresh  ÒìÏò½Ç±ä»¯ãĞÖµ   
-          same_thresh     Í¬Ïò½Ç±ä»¯ãĞÖµ
-          output_thresh   ³¬ÏŞãĞÖµ
-·µ»Ø  Öµ£º¹ıÂË½Ç¶È 
-**************************************************************************/ 
+  AOA_Angle_Filter
+Ï´Ç¶È£İµÄ»Õ¾
+Ú²AVG ÒªÄ½á¹¹
+          inverse_thresh  Ç±ä»¯
+          same_thresh     Í¬Ç±ä»¯
+          output_thresh
+  ÖµÇ¶
+**************************************************************************/
 void AOA_Angle_Filter(AOA_DATA* AVG, int inverse_thresh, int same_thresh,
-                      uint8_t output_thresh) 
+                      uint8_t output_thresh)
 {
-    static int last_angles[4] = {0}; // ´æ´¢4¸ö»ùÕ¾µÄÀúÊ·½Ç¶È
-    static int output_num[4] = {0};  // ´æ´¢Ç°4¸ö»ùÕ¾µÄÁ¬Ğø³¬ÏŞ´ÎÊı
+    static int last_angles[4] = {0}; // æ´¢4Õ¾Ê·Ç¶
+    static int output_num[4] = {0};  // æ´¢Ç°4Õ¾
 
-    for(int i=0; i<4; i++) 
-	{
-#ifdef USE_RSSI_TAG //¸ù¾İÊı¾İÊÇ·ñÓĞĞÅºÅÇ¿¶È£¬Ñ¡ÔñÊı¾İÔ´
-		//È·¶¨Êı¾İÓĞĞ§Ôò£¬´¦ÀíMore_tag_tof_AxÊı×é
-		if(AVG->More_tag_tof_Ax[i].angle !=0 && AVG->More_tag_tof_Ax[i].range !=0)
-		{
-			process_single_angle(&AVG->More_tag_tof_Ax[i].angle,&last_angles[i],
-								&output_num[i],output_thresh,
-								inverse_thresh, 
-								same_thresh);
-		}
+    for(int i=0; i<4; i++)
+        {
+#ifdef USE_RSSI_TAG //Ç·ÅºÈ£Ñ¡
+                //È·More_tag_tof_Ax
+                if(AVG->More_tag_tof_Ax[i].angle !=0 && AVG->More_tag_tof_Ax[i].range !=0)
+                {
+                        process_single_angle(&AVG->More_tag_tof_Ax[i].angle,&last_angles[i],
+                                                                &output_num[i],output_thresh,
+                                                                inverse_thresh,
+                                                                same_thresh);
+                }
 #else
-		//È·¶¨Êı¾İÓĞĞ§Ôò£¬´¦Àí´¦Àítag_tof_AxÊı×é
-		if(AVG->tag_tof_Ax[i].angle !=0 && AVG->tag_tof_Ax[i].range !=0)
-		{
-			process_single_angle(&AVG->tag_tof_Ax[i].angle,&last_angles[i],
-								&output_num[i],output_thresh,
-								inverse_thresh, 
-								same_thresh);
-		}
+                //È·tag_tof_Ax
+                if(AVG->tag_tof_Ax[i].angle !=0 && AVG->tag_tof_Ax[i].range !=0)
+                {
+                        process_single_angle(&AVG->tag_tof_Ax[i].angle,&last_angles[i],
+                                                                &output_num[i],output_thresh,
+                                                                inverse_thresh,
+                                                                same_thresh);
+                }
 #endif
-	}
+        }
 }
 
 /**************************************************************************
-º¯ÊıÃû  £ºKalman_filtering
-º¯Êı¹¦ÄÜ£º¼òµ¥µÄ¿¨¶ûÂüÂË²¨£¬ÎŞÊı¾İµÄ»ùÕ¾²»×öÂË²¨
-Èë¿Ú²ÎÊı£ºAVG       Êı¾İ´æ´¢Î»ÖÃ
-·µ»Ø  Öµ£ºÎŞ
-²ÎÊıº¬Òå: 
-**************************************************************************/ 
-void kalman_filter(AOA_DATA *AVG) 
+  Kalman_filtering
+Ä¿İµÄ»Õ¾
+Ú²AVG       İ´æ´¢Î»
+  Öµ
+:
+**************************************************************************/
+void kalman_filter(AOA_DATA *AVG)
 {
-	static KalmanState angle_states[4] = {0};//¶¨Òå½Ç¶ÈÂË²¨µÄ¿¨¶ûÂü²ÎÊı
-	static KalmanState range_states[4] = {0};//¶¨Òå¾àÀëÂË²¨µÄ¿¨¶ûÂü²ÎÊı
-	
-	for (int i = 0; i < 4; ++i) {
-		// »ñÈ¡Ô­Ê¼²âÁ¿Öµ
-		int16_t meas_angle; uint16_t meas_range;
+        static KalmanState angle_states[4] = {0};//Ç¶Ë²Ä¿
+        static KalmanState range_states[4] = {0};//Ä¿
 
-	#ifdef USE_RSSI_TAG //¸ù¾İÊı¾İÊÇ·ñÓĞĞÅºÅÇ¿¶È£¬Ñ¡ÔñÊı¾İÔ´
-		meas_angle = AVG->More_tag_tof_Ax[i].angle;
-		meas_range = AVG->More_tag_tof_Ax[i].range;
-	#else
-		meas_angle = AVG->tag_tof_Ax[i].angle;
-		meas_range = AVG->tag_tof_Ax[i].range;
-	#endif
+        for (int i = 0; i < 4; ++i) {
+                // Ê¼Öµ
+                int16_t meas_angle; uint16_t meas_range;
 
-		// ½Ç¶ÈÂË²¨´¦Àí
-		if (angle_states[i].p == 0) { // Ê×´Î³õÊ¼»¯
-			angle_states[i].x = (float)meas_angle;
-			angle_states[i].p = 1.0f;
-			angle_states[i].q = 0.4f;  // ¹ı³ÌÔëÉù
-			angle_states[i].r = 0.7f;  // ²âÁ¿ÔëÉù
-		} else {
-			// Ô¤²â½×¶Î
-			angle_states[i].p += angle_states[i].q;
-			
-			// ¸üĞÂ½×¶Î
-			float k = angle_states[i].p / (angle_states[i].p + angle_states[i].r);
-			angle_states[i].x += k * ((float)meas_angle - angle_states[i].x);
-			angle_states[i].p *= (1 - k);
-		}
+        #ifdef USE_RSSI_TAG //Ç·ÅºÈ£Ñ¡
+                meas_angle = AVG->More_tag_tof_Ax[i].angle;
+                meas_range = AVG->More_tag_tof_Ax[i].range;
+        #else
+                meas_angle = AVG->tag_tof_Ax[i].angle;
+                meas_range = AVG->tag_tof_Ax[i].range;
+        #endif
 
-		// ¾àÀëÂË²¨´¦Àí
-		if (range_states[i].p == 0) { // Ê×´Î³õÊ¼»¯
-			range_states[i].x = (float)meas_range;
-			range_states[i].p = 1.0f;
-			range_states[i].q = 0.3f;
-			range_states[i].r = 0.5f;
-		} else {
-			// Ô¤²â½×¶Î
-			range_states[i].p += range_states[i].q;
-			
-			// ¸üĞÂ½×¶Î
-			float k = range_states[i].p / (range_states[i].p + range_states[i].r);
-			range_states[i].x += k * ((float)meas_range - range_states[i].x);
-			range_states[i].p *= (1 - k);
-		}
+                // Ç¶Ë²
+                if (angle_states[i].p == 0) { // Î³Ê¼
+                        angle_states[i].x = (float)meas_angle;
+                        angle_states[i].p = 1.0f;
+                        angle_states[i].q = 0.4f;  //
+                        angle_states[i].r = 0.7f;  //
+                } else {
+                        // Ô¤
+                        angle_states[i].p += angle_states[i].q;
 
-		// »ØĞ´ÂË²¨½á¹û
-	#ifdef USE_RSSI_TAG
-		AVG->More_tag_tof_Ax[i].angle = (int16_t)roundf(angle_states[i].x);
-		AVG->More_tag_tof_Ax[i].range = (uint16_t)roundf(range_states[i].x);
-	#else
-		AVG->tag_tof_Ax[i].angle = (int16_t)roundf(angle_states[i].x);
-		AVG->tag_tof_Ax[i].range = (uint16_t)roundf(range_states[i].x);
-	#endif
-	}
+                        //
+                        float k = angle_states[i].p / (angle_states[i].p + angle_states[i].r);
+                        angle_states[i].x += k * ((float)meas_angle - angle_states[i].x);
+                        angle_states[i].p *= (1 - k);
+                }
+
+                //
+                if (range_states[i].p == 0) { // Î³Ê¼
+                        range_states[i].x = (float)meas_range;
+                        range_states[i].p = 1.0f;
+                        range_states[i].q = 0.3f;
+                        range_states[i].r = 0.5f;
+                } else {
+                        // Ô¤
+                        range_states[i].p += range_states[i].q;
+
+                        //
+                        float k = range_states[i].p / (range_states[i].p + range_states[i].r);
+                        range_states[i].x += k * ((float)meas_range - range_states[i].x);
+                        range_states[i].p *= (1 - k);
+                }
+
+                //
+        #ifdef USE_RSSI_TAG
+                AVG->More_tag_tof_Ax[i].angle = (int16_t)roundf(angle_states[i].x);
+                AVG->More_tag_tof_Ax[i].range = (uint16_t)roundf(range_states[i].x);
+        #else
+                AVG->tag_tof_Ax[i].angle = (int16_t)roundf(angle_states[i].x);
+                AVG->tag_tof_Ax[i].range = (uint16_t)roundf(range_states[i].x);
+        #endif
+        }
 }
 
 /**************************************************************************
-º¯ÊıÃû  £ºTOF10120_Judgment
-º¯Êı¹¦ÄÜ£º¸ù¾İµ±Ç°¾àÀëÖµÅĞ¶ÏÊÇ·ñÓ¦¸Ã×ªÏò
-		  0~25Îª¾¯½äÄ£Ê½  ÔÚ¾¯½äÄ£Ê½ÏÂºìµÆÁÁ£¬ÈÎÒâ´«¸ĞÆ÷¾àÀëÂú×ãÌõ¼ş¾Í½øĞĞ±ÜÕÏ
-Èë¿Ú²ÎÊı£ºËÄ¸ö´«¸ĞÆ÷¾àÀë 
-·µ»Ø  Öµ£ºint ÊıÖµ
-**************************************************************************/ 
+  TOF10120_Judgment
+İµÇ°ÖµÇ·
+                  0~25ÎªÊ½  Ê½Í½
+Ú²
+  Öµint Öµ
+**************************************************************************/
 
-int TOF10120_Judgment (float T_L,float T_ML,float T_MR,float T_R)//¾àÀëÅĞ¶Ï
+int TOF10120_Judgment (float T_L,float T_ML,float T_MR,float T_R)//
 {
-	//±ÜÕÏÄ£Ê½±êÖ¾Î»    ×óĞı -3    ¨L -2   ¨I -1   ¸úËæ 0   ¨J 1   ¨K2   ÓÒĞı 3    
+        //Ê½Î»     -3    L -2   I -1    0   J 1   K2    3
   static int Car_mode,Car_number=0,car_move=NO_ACTION,turn_number,turn_move=0,move_time=0;
-	//Car_number ¼ÆÊıÅĞ¶ÏÇ°·½ÊÇ·ñÓĞÕÏ°­
-	//car_move ·µ»ØÖµ£¬È·¶¨³µÁ¾ÒÔºÎÖÖ·½Ê½±ÜÕÏ
-	//turn_move ³µÁ¾µôÍ··½ÏòËøËÀ£¬·ÀÖ¹ÆäÀ´»ØµôÍ·
-	//move_time ÑÓ³¤³µÁ¾5¸öÅĞ¶ÏÖÜÆÚµÄ±ÜÕÏÊ±¼ä
-	int  Barrier=0,Car_status=(T_L+T_ML)-(T_MR+T_R);//
-	//µÚÒ»²½  ÅĞ¶Ï¾¯½ä·¶Î§ÄÚÊÇ·ñÓĞÕÏ°­
-	if (T_L<37 || T_ML<37 || T_MR<37 || T_R<37)//ÔÚ3´ÎÁ¬Ğø¼ì²â³µÁ¾Ç°ÓĞÎŞÕÏ°­ 25  25  25  25
-	{if(Car_number>=0){Car_number=0;Car_number--;}Car_number--;}
-	else if(T_L>=37 && T_ML>=37 && T_MR>=37  && T_R>=37){if(Car_number<=0){Car_number=0;Car_number++;}Car_number++;}// 25 25 25 25
-	if(Car_number<=-3){Car_number=0;Car_mode=1;}//¾¯½äÄ£Ê½
-	else if(Car_number>=3 && car_move==NO_ACTION){Car_number=0;Car_mode=0;}//ÍË³ö¾¯½äÄ£Ê½
-  
-  // ÅĞ¶Ï³µÁ¾ÊÇ·ñĞèÒªµôÍ·
-	if(T_L<10){Barrier++;}if(T_ML<=15){Barrier++;}if(T_MR<=15){Barrier++;}if(T_R<10){Barrier++;}
-	if(Barrier==4){turn_number=1;}//³µÁ¾Óöµ½ÎŞ·¨Ö±½Ó±Ü¹ıµÄÕÏ°­
-	else if(Barrier<=0){turn_number=0;turn_move=0;}//µ±³µÁ¾Ç°·½ÖÁÉÙÁ½¸ö·½ÏòÎŞÕÚµ²Ê±
-	
-	if(Car_mode==1 && turn_move==0)
-	{
-		if(turn_number==1)//µ±³µÁ¾ĞèÒªµôÍ·Ê±
-		{ 
-			if(Car_status<0){car_move=SPOT_LEFT_TURN;}//×óµôÍ·
-			else if(Car_status>=0){car_move=SPOT_RIGHT_TURN;}//ÓÒµôÍ·
-		}
-		else if(T_L<14 || T_ML<12 || T_MR<12 || T_R<14)//µ±³µÁ¾ĞèÒªµ¹³µÊ±// 12  10  10  12 
-		{
-			if(Car_status<0){car_move=LEFT_BACKWARD;}//×óºóµ¹³µ
-			else if(Car_status>=0){car_move=RIGHT_BACKWARD;}//ÓÒºóµ¹³µ
-			move_time=3;
-		}
-		else if(T_L<19 || T_ML<22 || T_MR<22 || T_R<19)//µ±³µÁ¾ĞèÒª×ªÍäÊ±17  20  20  17
-		{
-			if(Car_status<0){car_move=LEFT_BACKWARD;}//×ó×ª
-			else if(Car_status>=0){car_move=RIGHT_BACKWARD;}//ÓÒ×ª
-			move_time=3;
-		}
-		else if(move_time<=0){car_move=0;}//¼ÌĞø½øĞĞ¸úËæ
-	}
-	if(move_time>=0){move_time--;}//ÑÓ³¤×ªÍäÊ±¼ä·ÀÖ¹±ß½ÇÅö×²
-	if(car_move==SPOT_LEFT_TURN || car_move==SPOT_RIGHT_TURN){turn_move=1;}//µ±³µÁ¾½øĞĞµôÍ·ÔË¶¯ÊÇËøËÀ·½Ïò£¬·ÀÖ¹³µÁ¾·´¸´ÔË¶¯
-	//_dbg_printf("/car_move:%d\n",car_move);
-	return car_move;
+        //Car_number Ï°
+        //car_move È·Ö·Ê½
+        //turn_move Ö¹Øµ
+        //move_time 5ÚµÄ±
+        int  Barrier=0,Car_status=(T_L+T_ML)-(T_MR+T_R);//
+        //  Ï¾ä·¶Î§Ï°
+        if (T_L<37 || T_ML<37 || T_MR<37 || T_R<37)//3Ç° 25  25  25  25
+        {if(Car_number>=0){Car_number=0;Car_number--;}Car_number--;}
+        else if(T_L>=37 && T_ML>=37 && T_MR>=37  && T_R>=37){if(Car_number<=0){Car_number=0;Car_number++;}Car_number++;}// 25 25 25 25
+        if(Car_number<=-3){Car_number=0;Car_mode=1;}//Ê½
+        else if(Car_number>=3 && car_move==NO_ACTION){Car_number=0;Car_mode=0;}//Ê½
+
+  // Ï³
+        if(T_L<10){Barrier++;}if(T_ML<=15){Barrier++;}if(T_MR<=15){Barrier++;}if(T_R<10){Barrier++;}
+        if(Barrier==4){turn_number=1;}//Ö±Ó±Ü¹Ï°
+        else if(Barrier<=0){turn_number=0;turn_move=0;}//Ç°Ê±
+
+        if(Car_mode==1 && turn_move==0)
+        {
+                if(turn_number==1)//Òª
+                {
+                        if(Car_status<0){car_move=SPOT_LEFT_TURN;}//
+                        else if(Car_status>=0){car_move=SPOT_RIGHT_TURN;}//
+                }
+                else if(T_L<14 || T_ML<12 || T_MR<12 || T_R<14)//ÒªÊ±// 12  10  10  12
+                {
+                        if(Car_status<0){car_move=LEFT_BACKWARD;}//óµ¹³
+                        else if(Car_status>=0){car_move=RIGHT_BACKWARD;}//óµ¹³
+                        move_time=3;
+                }
+                else if(T_L<19 || T_ML<22 || T_MR<22 || T_R<19)//Òª×ªÊ±17  20  20  17
+                {
+                        if(Car_status<0){car_move=LEFT_BACKWARD;}//×ª
+                        else if(Car_status>=0){car_move=RIGHT_BACKWARD;}//×ª
+                        move_time=3;
+                }
+                else if(move_time<=0){car_move=0;}//
+        }
+        if(move_time>=0){move_time--;}//×ªÊ±Ö¹ß½×²
+        if(car_move==SPOT_LEFT_TURN || car_move==SPOT_RIGHT_TURN){turn_move=1;}//Ë¶Ö¹
+        //_dbg_printf("/car_move:%d\n",car_move);
+        return car_move;
 }
 
 /**************************************************************************
-º¯ÊıÃû  £ºAOA_Control
-º¯Êı¹¦ÄÜ£ºAOAÒ£¿Ø¿ØÖÆ
-Èë¿Ú²ÎÊı£ºaoa  ½ÓÊÕµ½µÄAOA²ÎÊı
-·µ»Ø  Öµ£ºint ÊıÖµ ¿ØÖÆ²ÎÊı
+  AOA_Control
+AOAÒ£Ø¿
+Ú²aoa  ÕµAOA
+  Öµint Öµ Æ²
 **************************************************************************/
 int AOA_Control(AOA_DATA *AVG)
 {
-	 uint8_t return_bit=0;
-	 
-	 //ÅĞ¶ÏÊÇ·ñÔÚÒ£¿ØÄ£Ê½ÏÂ
-	 if(AVG->Aoa_para_t.mode==1 && AVG->Aoa_para_t.recal==0 )//Ò£¿Ø¿ØÖÆ   
-	 {
-			return_bit=STOP_MOTOR;//Èç¹ûÏÂÁĞÃüÁîÎŞĞ§ ÔòÍ£Ö¹
-			if(AVG->Aoa_para_t.turn_up==1){return_bit=RCSF;}//ÍùÇ°
-			else if(AVG->Aoa_para_t.turn_down==1){return_bit=BACKWARD;}//Ïòºó
-			else if(AVG->Aoa_para_t.turn_left==1){return_bit=SPOT_LEFT_TURN;}//Ïò×ó
-			else if(AVG->Aoa_para_t.turn_right==1){return_bit=SPOT_RIGHT_TURN;}//ÏòÓÒ
-	 }
-	 
-//	 _dbg_printf("lock:%d  recal:%d  mode:%d  turn_right:%d  turn_left:%d  turn_down:%d  turn_up:%d  return_bit:%d\n",AVG->Aoa_para_t.lock,AVG->Aoa_para_t.recal,
-//																									 AVG->Aoa_para_t.mode,AVG->Aoa_para_t.turn_right,
-//																									 AVG->Aoa_para_t.turn_left,AVG->Aoa_para_t.turn_down,
-//																									 AVG->Aoa_para_t.turn_up,return_bit);
-		
-	 return return_bit;
+         uint8_t return_bit=0;
+
+         //Ç·Ê½
+         if(AVG->Aoa_para_t.mode==1 && AVG->Aoa_para_t.recal==0 )//Ò£Ø¿
+         {
+                        return_bit=STOP_MOTOR;//Ğ§ Í£Ö¹
+                        if(AVG->Aoa_para_t.turn_up==1){return_bit=RCSF;}//Ç°
+                        else if(AVG->Aoa_para_t.turn_down==1){return_bit=BACKWARD;}//
+                        else if(AVG->Aoa_para_t.turn_left==1){return_bit=SPOT_LEFT_TURN;}//
+                        else if(AVG->Aoa_para_t.turn_right==1){return_bit=SPOT_RIGHT_TURN;}//
+         }
+
+//       _dbg_printf("lock:%d  recal:%d  mode:%d  turn_right:%d  turn_left:%d  turn_down:%d  turn_up:%d  return_bit:%d\n",AVG->Aoa_para_t.lock,AVG->Aoa_para_t.recal,
+//                                                                                                                                                                                                       AVG->Aoa_para_t.mode,AVG->Aoa_para_t.turn_right,
+//                                                                                                                                                                                                       AVG->Aoa_para_t.turn_left,AVG->Aoa_para_t.turn_down,
+//                                                                                                                                                                                                       AVG->Aoa_para_t.turn_up,return_bit);
+
+         return return_bit;
 }
 
 
 /**************************************************************************
-º¯ÊıÃû  £ºOled_And_Tof_Control
-º¯Êı¹¦ÄÜ£ºOLED¶ÁÈ¡ Óë TOFÊı¾İ¶ÁÈ¡ÓëÓ¦ÓÃ
-Èë¿Ú²ÎÊı£ºAOA¾àÀë½Ç¶È Óë Ò£¿ØÄ£Ê½
-·µ»Ø  Öµ£º·µ»ØTOF¾àÀëÅĞ¶Ï½á¹û
-×¢£ºÓÉÓÚTOFÓëOLEDÓ²¼ş³åÍ»Í¬Ê±Ê¹ÓÃÓ²¼şIICÈİÒ×µ¼ÖÂ¿¨¶Ù£¬¶øTOFÊ¹ÓÃÄ£ÄâIIC¶ÁÈ¡ÓĞÒ»¶¨ÄÜ¶Á
-	¹ÊÊ¹ÓÃÄ£ÄâIICÉèÖÃOLED£¬Ó²¼şIIC¶ÁÈ¡TOF
+  Oled_And_Tof_Control
+OLEDÈ¡  TOFİ¶È¡Ó¦
+Ú²AOAÇ¶  Ò£Ê½
+  ÖµTOFÏ½
+×¢TOFOLEDÓ²Í¬Ê±Ê¹Ó²IICÙ£TOFÊ¹Ä£IICÈ¡Ò»
+        Ä£IICOLEDÓ²IICÈ¡TOF
 **************************************************************************/
 int Oled_And_Tof_Control(int Aoa_Ang,int Aoa_Dis,uint8_t YK_mode)
 {
-	int16_t Tof_bit=0;
-	
-	//Èí¼şOLEDÆÁ´òÓ¡
-	I2C_GenerateSTOP(I2C2, ENABLE);
-	I2C_DeInit(I2C2);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2,DISABLE);
-	IIC_Init();	//Èí¼şIIC  
-	OLED_ALL_Display(YK_mode);
-	OLED_Follow_Data_Display(Aoa_Dis,Aoa_Ang);
-	
-	//Ó²¼şTOFÓ¦ÓÃ
-	I2C2_Configuration();//Ó²¼şIIC
-	TOF250_READ(&TOF_D);
-	Tof_bit=TOF10120_Judgment(TOF_D.LEFT_MM,TOF_D.MIDDLE_L_MM,TOF_D.MIDDLE_R_MM,TOF_D.RIGHT_MM);//¾àÀëÅĞ¶Ï;
-//	TOF_D.LEFT_MM=100;
-//	TOF_D.MIDDLE_L_MM=100;
-//	TOF_D.MIDDLE_R_MM=100;
-//	TOF_D.RIGHT_MM=100;
-	return Tof_bit;
+        static TOF_Distance prev_tof_data = {0}; // æ´¢Ò»ÎµTOFÚ±È½
+        int16_t Tof_bit=0;
+
+        //OLED
+        I2C_GenerateSTOP(I2C2, ENABLE);
+        I2C_DeInit(I2C2);
+        RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2,DISABLE);
+        IIC_Init();     //IIC
+        OLED_ALL_Display(YK_mode);
+        OLED_Follow_Data_Display(Aoa_Dis,Aoa_Ang);
+
+        //Ó²TOFÓ¦
+        I2C2_Configuration();//Ó²IIC
+        TOF250_READ(&TOF_D);
+
+        // Ë²ÖµÓ°
+        TOF_Distance filtered_data;
+
+        // İ½
+        filtered_data.LEFT_MM = (TOF_D.LEFT_MM > 0 && TOF_D.LEFT_MM <= 200) ? TOF_D.LEFT_MM :
+                                                        (prev_tof_data.LEFT_MM > 0 ? prev_tof_data.LEFT_MM : 100);
+        filtered_data.MIDDLE_L_MM = (TOF_D.MIDDLE_L_MM > 0 && TOF_D.MIDDLE_L_MM <= 200) ? TOF_D.MIDDLE_L_MM :
+                                                                (prev_tof_data.MIDDLE_L_MM > 0 ? prev_tof_data.MIDDLE_L_MM : 100);
+        filtered_data.MIDDLE_R_MM = (TOF_D.MIDDLE_R_MM > 0 && TOF_D.MIDDLE_R_MM <= 200) ? TOF_D.MIDDLE_R_MM :
+                                                                (prev_tof_data.MIDDLE_R_MM > 0 ? prev_tof_data.MIDDLE_R_MM : 100);
+        filtered_data.RIGHT_MM = (TOF_D.RIGHT_MM > 0 && TOF_D.RIGHT_MM <= 200) ? TOF_D.RIGHT_MM :
+                                                         (prev_tof_data.RIGHT_MM > 0 ? prev_tof_data.RIGHT_MM : 100);
+
+        // Ê·
+        prev_tof_data = filtered_data;
+
+        // Ê¹İ½
+        Tof_bit=TOF10120_Judgment(filtered_data.LEFT_MM, filtered_data.MIDDLE_L_MM, filtered_data.MIDDLE_R_MM, filtered_data.RIGHT_MM);//;
+
+        // Ç¿Ç°
+        float front_avg = (filtered_data.MIDDLE_L_MM + filtered_data.MIDDLE_R_MM) / 2.0f;
+
+        // Ç°Í»È»
+        static float prev_front_avg = 0;
+        if(prev_front_avg > 0 && front_avg < prev_front_avg * 0.6 && front_avg < 30) {
+                // Ç°Ğ¡
+                Tof_bit = front_avg < (filtered_data.LEFT_MM + filtered_data.RIGHT_MM)/2.0f ?
+                          LEFT_BACKWARD : RIGHT_BACKWARD;
+        }
+        prev_front_avg = front_avg;
+
+        return Tof_bit;
 }
 
 /**************************************************************************
-º¯ÊıÃû  £ºAOA_Pattern_recognition
-º¯Êı¹¦ÄÜ£ºÉè±¸¸úËæÄ£Ê½ÅĞ¶Ï
-Èë¿Ú²ÎÊı£ºAVG  ½ÓÊÕµ½µÄAOA²ÎÊı
-·µ»Ø  Öµ£ºµ±Ç°ÅĞ¶ÏµÄÄ£Ê½ 
+  AOA_Pattern_recognition
+Ä£Ê½
+Ú²AVG  ÕµAOA
+  ÖµÇ°ÏµÊ½
 **************************************************************************/
 uint8_t AOA_Pattern_recognition(AOA_DATA *AVG)
 {
-	static uint8_t mode=NO_FULL,mode_bit0=0,mode_bit1=0,mode_bit2=0,mode_bit3=0;
-	
-	if(AVG->Aoa_para_t.mode==1 && AVG->Aoa_para_t.recal==0 ){mode_bit0=0; mode_bit1++; mode_bit2=0; mode_bit3=0;}//Ò£¿ØÄ£Ê½ 
-	else if(AVG->Aoa_para_t.mode==1 && AVG->Aoa_para_t.recal==1 ){mode_bit0=0; mode_bit1=0; mode_bit2++; mode_bit3=0;}//ÕÙ»ØÄ£Ê½ 
-	else if(AVG->Aoa_para_t.mode==0 && AVG->Aoa_para_t.recal==0 ){mode_bit0=0; mode_bit1=0; mode_bit2=0; mode_bit3++;}//¸úËæÄ£Ê½ 
-	
-	if(AVG->Aoa_para_t.lock==1){mode=Lock_mode;}//Í£Ö¹
-	else if(mode_bit1>=5){mode=Remote_mode;}//_dbg_printf("Ò£¿Ø\n");}
-	else if(mode_bit2>=5){mode=Recall_mode;}//_dbg_printf("ÕÙ»Ø\n");}
-	else if(mode_bit3>=5){mode=Follow_mode;}//_dbg_printf("¸úËæ\n");}
-	
-	return mode;
+        static uint8_t mode=NO_FULL,mode_bit0=0,mode_bit1=0,mode_bit2=0,mode_bit3=0;
+
+        if(AVG->Aoa_para_t.mode==1 && AVG->Aoa_para_t.recal==0 ){mode_bit0=0; mode_bit1++; mode_bit2=0; mode_bit3=0;}//Ò£Ê½
+        else if(AVG->Aoa_para_t.mode==1 && AVG->Aoa_para_t.recal==1 ){mode_bit0=0; mode_bit1=0; mode_bit2++; mode_bit3=0;}//Ê½
+        else if(AVG->Aoa_para_t.mode==0 && AVG->Aoa_para_t.recal==0 ){mode_bit0=0; mode_bit1=0; mode_bit2=0; mode_bit3++;}//Ä£Ê½
+
+        if(AVG->Aoa_para_t.lock==1){mode=Lock_mode;}//Í£Ö¹
+        else if(mode_bit1>=5){mode=Remote_mode;}//_dbg_printf("Ò£\n");}
+        else if(mode_bit2>=5){mode=Recall_mode;}//_dbg_printf("\n");}
+        else if(mode_bit3>=5){mode=Follow_mode;}//_dbg_printf("\n");}
+
+        return mode;
 }
 
 /**************************************************************************
-º¯ÊıÃû  £ºUpdateAoaData
-º¯Êı¹¦ÄÜ£º¶ÁÈ¡·ÇÁãÊı¾İ
-Èë¿Ú²ÎÊı£ºaoa Êı¾İ
-·µ»Ø  Öµ£ºÎŞ
+  UpdateAoaData
+È¡
+Ú²aoa
+  Öµ
 **************************************************************************/
 uint8_t UpdateAoaData(General_t *aoa)
 {
-	
-	#ifdef USE_RSSI_TAG //´øĞÅºÅÇ¿¶È
-			 // ¸üĞÂMore_tag_tof_AxÊı×é£¨¹ıÂË0Öµ£©
-		for (int i = 0; i < 4; i++) 
-		{
-			// ¸üĞÂangle×Ö¶Î£¨int16_t£©
-			if (aoa->More_tag_tof_Ax[i].angle != 0 &&  abs(aoa->More_tag_tof_Ax[i].angle)<90) {
-				AVG.More_tag_tof_Ax[i].angle = aoa->More_tag_tof_Ax[i].angle;
-			}
-			
-			// ¸üĞÂrange×Ö¶Î£¨uint16_t£©
-			if (aoa->More_tag_tof_Ax[i].range != 0) {
-				AVG.More_tag_tof_Ax[i].range = aoa->More_tag_tof_Ax[i].range;
-			}
-			
-			// ¸üĞÂrssi×Ö¶Î£¨int16_t£©
-			if (aoa->More_tag_tof_Ax[i].rssi != 0) {
-				AVG.More_tag_tof_Ax[i].rssi = aoa->More_tag_tof_Ax[i].rssi;
-			}
-		}
-	#else  //²»´øĞÅºÅÇ¿¶È
-		for (int i = 0; i < 4; i++) 
-		{
-			// ¸üĞÂangle×Ö¶Î£¨int16_t£©
-			if (aoa->More_tag_tof_Ax[i].angle != 0) {
-				AVG.tag_tof_Ax[i].angle = aoa->tag_tof_Ax[i].angle;
-			}
-			
-			// ¸üĞÂrange×Ö¶Î£¨uint16_t£©
-			if (aoa->More_tag_tof_Ax[i].range != 0) {
-				AVG.tag_tof_Ax[i].range = aoa->tag_tof_Ax[i].range;
-			}
-		}
-	#endif
+
+        #ifdef USE_RSSI_TAG //
+                         // More_tag_tof_Ax0Öµ
+                for (int i = 0; i < 4; i++)
+                {
+                        // angleÎ£int16_t
+                        if (aoa->More_tag_tof_Ax[i].angle != 0 &&  abs(aoa->More_tag_tof_Ax[i].angle)<90) {
+                                AVG.More_tag_tof_Ax[i].angle = aoa->More_tag_tof_Ax[i].angle;
+                        }
+
+                        // rangeÎ£uint16_t
+                        if (aoa->More_tag_tof_Ax[i].range != 0) {
+                                AVG.More_tag_tof_Ax[i].range = aoa->More_tag_tof_Ax[i].range;
+                        }
+
+                        // rssiÎ£int16_t
+                        if (aoa->More_tag_tof_Ax[i].rssi != 0) {
+                                AVG.More_tag_tof_Ax[i].rssi = aoa->More_tag_tof_Ax[i].rssi;
+                        }
+                }
+        #else  //
+                for (int i = 0; i < 4; i++)
+                {
+                        // angleÎ£int16_t
+                        if (aoa->More_tag_tof_Ax[i].angle != 0) {
+                                AVG.tag_tof_Ax[i].angle = aoa->tag_tof_Ax[i].angle;
+                        }
+
+                        // rangeÎ£uint16_t
+                        if (aoa->More_tag_tof_Ax[i].range != 0) {
+                                AVG.tag_tof_Ax[i].range = aoa->tag_tof_Ax[i].range;
+                        }
+                }
+        #endif
 }
 
 
 /**************************************************************************
-º¯ÊıÃû  £ºfollow_car_task
-º¯Êı¹¦ÄÜ£º1.ÅĞ¶ÏA0»ùÕ¾ÊÇ·ñÓĞÊı¾İ
-          2.¹ıÂËÊı¾İ£¬È¥³ıÌø±ä´óµÄÊı¾İ
-          3.¶ÔÊı¾İ½øĞĞ³õ²½·ÖÎö£¬ÅĞ¶Ï±êÇ©ËùÔÚÎ»ÖÃ
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£º»ùÕ¾ÊÇ·ñÓĞÊı¾İ
+  follow_car_task
+1.A0Õ¾
+          2.İ£È¥
+          3.İ½Ï±Î»
+Ú²
+  ÖµÕ¾
 **************************************************************************/
 uint8_t follow_car_task(void)
 {
-	Message msg;
-	General_t aoa;
-	//Êı¾İ»º³å
-	static uint8_t Buffer_index=0;          // »º³åË÷Òı
-	static uint8_t data_buffer[BUFFER_SIZE] = {0}; // Êı¾İ»º³å³Ø
-	uint8_t Valid_count = 0,Valid_Bit=20;
-	
-	if(get_AOA_data(&msg) == true)
-	{
-		if(AOA_Car_Hex_Resolution(msg.buf,&aoa))//Êı¾İ½âÎö 
-		{
-			// ¸üĞÂ»º³å³Ø£¨×îĞÂÊı¾İÖÃ1£©
-			data_buffer[Buffer_index] = 1;  Buffer_index = (Buffer_index + 1) % BUFFER_SIZE;
+        Message msg;
+        General_t aoa;
+        //İ»
+        static uint8_t Buffer_index=0;          //
+        static uint8_t data_buffer[BUFFER_SIZE] = {0}; // İ»
+        uint8_t Valid_count = 0,Valid_Bit=20;
 
-			UpdateAoaData(&aoa);//¸üĞÂAOA ½Ç¶ÈÖµ
+        if(get_AOA_data(&msg) == true)
+        {
+                if(AOA_Car_Hex_Resolution(msg.buf,&aoa))//İ½
+                {
+                        // 1
+                        data_buffer[Buffer_index] = 1;  Buffer_index = (Buffer_index + 1) % BUFFER_SIZE;
 
-			AOA_Angle_Filter(&AVG,60,35,25);//½Ç¶ÈÌø±ä¹ıÂË
+                        UpdateAoaData(&aoa);//AOA Ç¶
 
-			kalman_filter(&AVG);//¼òµ¥µÄ¿¨¶ûÂüÂË²¨
-			
-			memcpy(&AVG.Aoa_para_t, &aoa.para_t, sizeof(aoa.para_t));//¸´ÖÆÒ£¿ØÖµ
-		}
-	}
-	else 
-	{
-		// ÎŞÊı¾İÊ±Ìî³ä0
-		data_buffer[Buffer_index] = 0;   Buffer_index = (Buffer_index + 1) % BUFFER_SIZE;
-	}
-	
-//U1-AOA-Êı¾İ 33HZ×óÓÒ   follow_car_task 10msÔËĞĞÒ»´Î£¬¼´100HZ
-//data_buffer»º³åÊı×é50¸öÊı¾İ£¬¼´Ê±¼ä¿ç¶È500ms¡£
-//ÀíÂÛÉÏÓĞ16¸öÊı¾İ£¬ µ±»º³åÇøÄÚÓĞ 10¸öÓĞĞ§Êı¾İÒÔÉÏÊ±£¬±íÃ÷Êı¾İÕı³£½ÓÊÕ
-	for(uint8_t i=0; i<BUFFER_SIZE; i++){Valid_count += data_buffer[i];}//Í³¼ÆÓĞĞ§Êı¾İ¸öÊı
-	
-	if(Valid_count >= Valid_Bit ? 1 : 0)
-	{
-		AVG.Remote_control=AOA_Control(&AVG);//Ò£¿Ø°´Å¥ÅĞ¶Ï
-//		
-		if(AVG.Aoa_para_t.dev_type==2)//ÅĞ¶ÏÒ£¿ØÄ£Ê½
-		{
-			AVG.Car_mode=AOA_Pattern_recognition(&AVG);//Ò£¿ØÄ£Ê½ÅĞ¶Ï
-		}
-		else//ÆäÓà±êÇ© ×Ô¶¯½øÈë¸úËæÄ£Ê½
-		{
-			AVG.Car_mode=Follow_mode;
-		}
-//		_dbg_printf("RC:%d   CM:%d   FB:%d   BS:%d\r\n",AVG.Remote_control,AVG.Car_mode,AVG.Basic_Directions,AVG.Inactive_BS);
-//		_dbg_printf("1Valid_Bit:%d   Valid_count:%d\r\n",Valid_Bit,Valid_count);
-	}
-	else 
-	{
-		AVG.Car_mode=NO_FULL;//ÎŞÊı¾İ
-//		_dbg_printf("2Valid_Bit:%d   Valid_count:%d\r\n",Valid_Bit,Valid_count);
-	}
-	return Valid_count >= Valid_Bit ? 1 : 0; // 100ms ÄÚÓĞ3¸öÒÔÉÏµÄÊı¾İ
+                        AOA_Angle_Filter(&AVG,60,35,25);//Ç¶
+
+                        kalman_filter(&AVG);//Ä¿
+
+                        memcpy(&AVG.Aoa_para_t, &aoa.para_t, sizeof(aoa.para_t));//Ò£
+                }
+        }
+        else
+        {
+                // 0
+                data_buffer[Buffer_index] = 0;   Buffer_index = (Buffer_index + 1) % BUFFER_SIZE;
+        }
+
+//U1-AOA- 33HZ   follow_car_task 10msÒ»Î£100HZ
+//data_buffer50İ£Ê±500ms
+//16İ£  10Ğ§
+        for(uint8_t i=0; i<BUFFER_SIZE; i++){Valid_count += data_buffer[i];}//Í³İ¸
+
+        if(Valid_count >= Valid_Bit ? 1 : 0)
+        {
+                AVG.Remote_control=AOA_Control(&AVG);//Ò£Ø°Å¥
+//
+                if(AVG.Aoa_para_t.dev_type==2)//Ê½
+                {
+                        AVG.Car_mode=AOA_Pattern_recognition(&AVG);//Ò£Ê½
+                }
+                else// Ä£Ê½
+                {
+                        AVG.Car_mode=Follow_mode;
+                }
+//              _dbg_printf("RC:%d   CM:%d   FB:%d   BS:%d\r\n",AVG.Remote_control,AVG.Car_mode,AVG.Basic_Directions,AVG.Inactive_BS);
+//              _dbg_printf("1Valid_Bit:%d   Valid_count:%d\r\n",Valid_Bit,Valid_count);
+        }
+        else
+        {
+                AVG.Car_mode=NO_FULL;//
+//              _dbg_printf("2Valid_Bit:%d   Valid_count:%d\r\n",Valid_Bit,Valid_count);
+        }
+        return Valid_count >= Valid_Bit ? 1 : 0; // 100ms 3
 }
 
 
 /**************************************************************************
-º¯Êı¹¦ÄÜ£º¶ÁÈ¡AOA²ÎÊı²¢¸ù¾İ²ÎÊı½øĞĞ¿ØÖÆ
-Èë¿Ú²ÎÊı£ºÎŞ
-·µ»Ø  Öµ£ºÎŞ
-×÷    Õß£ºWHEELTEC
+È¡AOAİ²
+Ú²
+  Öµ
+    WHEELTEC
 **************************************************************************/
 void Read_AoA_Control(void)
 {
-	static uint8_t Dodge_mark;
-	static uint64_t Move_Time=0,Motor_Time=0,LED_time;
-	//Êı¾İ´¦Àí 10ms ÔËĞĞÒ»´Î
-	if(portGetTickCnt()-Motor_Time>=10000)//100ms ÅĞ¶ÏÒ»´Î
-	{
-		Motor_Time=portGetTickCnt();//Ê±¼ä¼ÇÂ¼
-		if(follow_car_task())
-		{
-			LED_time++;
-			if(LED_time%50==0){LED2(ON);}else {LED2(OFF);}//Õı³£ÔËĞĞÊ± LED2ÉÁË¸
-		}
-		else{LED2(OFF);}
-	}
-	//µç»ú¿ØÖÆÓëOLED´òÓ¡ 50ms¿ØÖÆÒ»´Î
-	if(portGetTickCnt()-Move_Time>=50000)//40ms ¿ØÖÆÒ»´Îµç»ú
-	{
-		Move_Time=portGetTickCnt();//Ê±¼ä¼ÇÂ¼
+        static uint8_t Dodge_mark;
+        static uint64_t Move_Time=0,Motor_Time=0,LED_time;
+        //İ´ 10ms Ò»
+        if(portGetTickCnt()-Motor_Time>=10000)//100ms
+        {
+                Motor_Time=portGetTickCnt();//Ê±Â¼
+                if(follow_car_task())
+                {
+                        LED_time++;
+                        if(LED_time%50==0){LED2(ON);}else {LED2(OFF);}//Ê± LED2Ë¸
+                }
+                else{LED2(OFF);}
+        }
+        //OLED 50ms
+        if(portGetTickCnt()-Move_Time>=50000)//40ms Îµ
+        {
+                Move_Time=portGetTickCnt();//Ê±Â¼
 
-#ifdef USE_RSSI_TAG //¸ù¾İÊı¾İÊÇ·ñÓĞĞÅºÅÇ¿¶È£¬Ñ¡ÔñÊı¾İÔ´
-		AVG.Distance_filter=AVG.More_tag_tof_Ax[0].range;
-		AVG.Angle_filter=AVG.More_tag_tof_Ax[0].angle;
-#else  //²»´øĞÅºÅÇ¿¶È
-		AVG.Distance_filter=AVG.tag_tof_Ax[0].range;
-		AVG.Angle_filter=AVG.tag_tof_Ax[0].angle;
+#ifdef USE_RSSI_TAG //Ç·ÅºÈ£Ñ¡
+                AVG.Distance_filter=AVG.More_tag_tof_Ax[0].range;
+                AVG.Angle_filter=AVG.More_tag_tof_Ax[0].angle;
+#else  //
+                AVG.Distance_filter=AVG.tag_tof_Ax[0].range;
+                AVG.Angle_filter=AVG.tag_tof_Ax[0].angle;
 #endif
 
-		switch(AVG.Car_mode)//Ä£Ê½Ñ¡Ôñ
-		{
-			case NO_FULL://±êÇ©ÎŞÊı¾İÎŞÊı¾İ
-//				_dbg_printf("NO_FULL \r\n");
-				CAR_STOP();
-			break;
-			
-			case Lock_mode://ËøÄ£Ê½// U1 AOAÎŞËø¹¦ÄÜ ¹ÊÈ¥³ı
-//				_dbg_printf("Lock_mode \r\n");
-				CAR_STOP();
-			break;
-			
-			case Follow_mode://¸úËæÄ£Ê½
-				AVG.Car_Speed=Follow_speed;
-				Car_Pwm_Direction(120,10,AVG.Car_Speed);
-//				_dbg_printf("Follow_mode \r\n");
-			break;
-			
-			case Recall_mode://ÕÙ»ØÄ£Ê½
-//				_dbg_printf("Recall_mode \r\n");
-			break;
-			
-			case Remote_mode://Ò£¿ØÄ£Ê½
-				AVG.Car_Speed=Rcsf_speed;
-				Preset_State_Of_Motor(AVG.Remote_control);
-//				_dbg_printf("Remote_mode \r\n");
-			break;
-			
-			default:break;
-		}
-		AVG.Tof_Directions=Oled_And_Tof_Control(AVG.Angle_filter,AVG.Distance_filter,AVG.Car_mode);
-		if(AVG.Tof_Directions != 0){LED1(ON);}else {LED1(OFF);}//Ç°·½ÓĞÕÏ°­Ê±LED1¿ªÆô
-	}
+                switch(AVG.Car_mode)//Ä£Ê½Ñ¡
+                {
+                        case NO_FULL://
+//                              _dbg_printf("NO_FULL \r\n");
+                                CAR_STOP();
+                        break;
+
+                        case Lock_mode://Ä£Ê½// U1 AOA
+//                              _dbg_printf("Lock_mode \r\n");
+                                CAR_STOP();
+                        break;
+
+                        case Follow_mode://Ä£Ê½
+                                AVG.Car_Speed=Follow_speed;
+                                Car_Pwm_Direction(120,10,AVG.Car_Speed);
+//                              _dbg_printf("Follow_mode \r\n");
+                        break;
+
+                        case Recall_mode://Ê½
+//                              _dbg_printf("Recall_mode \r\n");
+                        break;
+
+                        case Remote_mode://Ò£Ê½
+                                AVG.Car_Speed=Rcsf_speed;
+                                Preset_State_Of_Motor(AVG.Remote_control);
+//                              _dbg_printf("Remote_mode \r\n");
+                        break;
+
+                        default:break;
+                }
+                AVG.Tof_Directions=Oled_And_Tof_Control(AVG.Angle_filter,AVG.Distance_filter,AVG.Car_mode);
+                if(AVG.Tof_Directions != 0){LED1(ON);}else {LED1(OFF);}//Ç°Ê±LED1
+        }
 }
-
-
-
-
-
-
-
-

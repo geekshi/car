@@ -111,6 +111,6 @@ int main(void)
                 Read_AoA_Control();
 
                 // 条码扫描任务处理
-                //Barcode_Scanner_Task();
+                Barcode_Scanner_Task();
         }
 }

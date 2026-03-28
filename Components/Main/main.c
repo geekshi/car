@@ -109,12 +109,15 @@ int main(void)
 		if (g_barcode_ready == 1)
         {
             g_barcode_ready = 0;
-					  //OLED print
+						//OLED print
             I2C_GenerateSTOP(I2C2, ENABLE);
             I2C_DeInit(I2C2);
             RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2,DISABLE);
             IIC_Init();
-            OLED_ShowStr(40, 6, (char*)g_barcode_buffer, 2);
+					  OLED_CLS();
+            OLED_ShowStr(0, 3, (char*)g_barcode_buffer, 2);
+					  Delay_ms(2000);
+					  OLED_display(3);
             //Barcode_Echo_String((char*)g_barcode_buffer);
         }
 	}

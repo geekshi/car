@@ -7,7 +7,6 @@
  * @brief	官改测距源码(使用官方库04.00.06) 运行平台:UWB-S1(参考下列网址)
  * @store	https://item.taobao.com/item.htm?spm=a1z10.5-c.w4002-23565193320.10.6e6c3f96tF7wds&id=572212584700
 **********************************************************************************/
-
 #include "stm32f10x.h"
 #include "delay.h"
 #include "Periph_init.h"
@@ -18,6 +17,9 @@
 #include "hal_iic.h"
 #include "oled_i2c.h"
 #include "motor.h"
+extern volatile uint8_t g_barcode_ready;
+extern char g_barcode_buffer[];
+void Barcode_Echo_String(char *str);
 /*******************************************************************************
 *******************************************************************************/
 void RCC_Configuration_part(void)
@@ -104,6 +106,33 @@ int main(void)
 	while(1)
 	{
 		Read_AoA_Control();
+		if (g_barcode_ready == 1)
+        {
+            g_barcode_ready = 0;
+					  //OLED print
+            I2C_GenerateSTOP(I2C2, ENABLE);
+            I2C_DeInit(I2C2);
+            RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2,DISABLE);
+            IIC_Init();
+            OLED_ShowStr(40, 6, (char*)g_barcode_buffer, 2);
+            //Barcode_Echo_String((char*)g_barcode_buffer);
+        }
 	}
 }
 
+void Barcode_Echo_String(char *str)
+{
+    char *p = str;
+    while (*p)
+    {
+        USART_SendData(UART4, *p);
+        while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
+        p++;
+    }
+    USART_SendData(UART4, 0x0D);
+    while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
+    USART_SendData(UART4, 0x0A);
+    while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
+    
+    while (USART_GetFlagStatus(UART4, USART_FLAG_TC) == RESET);
+}

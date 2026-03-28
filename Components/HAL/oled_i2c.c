@@ -633,13 +633,17 @@ void OLED_display(int word)
 		case 1: OLED_CLS();OLED_ShowCN(19,3,0);OLED_ShowCN(45,3,1);OLED_ShowCN(71,3,2);OLED_ShowCN(97,3,3);break;//显示公司名	
 
 		case 2: OLED_CLS();OLED_ShowCN(11,0,8);OLED_ShowCN(41,0,9);OLED_ShowCN(75,0,9);OLED_ShowCN(105,0,14);//显示  遥控控制
-				OLED_ShowCN(0,3,18);OLED_ShowCN(16,3,5);OLED_ShowStr(32,3, ":", 2); //显示 速度:
-				OLED_ShowCN(64,3,27);OLED_ShowStr(80,3, ":", 2);//显示 中：
-				OLED_ShowCN(0,6,20);OLED_ShowStr(16,6, ":", 2);OLED_ShowCN(64,6,19);OLED_ShowStr(80,6, ":", 2);break;//显示 左：   右： 
+				OLED_ShowCN(0,2,18);OLED_ShowCN(16,2,5);OLED_ShowStr(32,2, ":", 2); //显示 速度:
+				OLED_ShowCN(64,2,27);OLED_ShowStr(80,2, ":", 2);//显示 中：
+				OLED_ShowCN(0,4,20);OLED_ShowStr(16,4, ":", 2);OLED_ShowCN(64,4,19);OLED_ShowStr(80,4, ":", 2);//显示 左：   右： 
+		    OLED_ShowStr(0, 6, "scan:", 2);
+		    break;
 
 		case 3: OLED_CLS();OLED_ShowCN(11,0,10);OLED_ShowCN(41,0,11);OLED_ShowCN(75,0,12);OLED_ShowCN(105,0,13);//显示 跟随模式 
-				OLED_ShowCN(16,3,6);OLED_ShowCN(32,3,7);OLED_ShowStr(48,3, ":", 2);OLED_ShowCN(88,3,25);//显示 距离： 米
-				OLED_ShowCN(16,6,4);OLED_ShowCN(32,6,5);OLED_ShowStr(48,6, ":", 2);OLED_ShowCN(88,6,5);break;//显示 角度： 度			
+				OLED_ShowCN(16,2,6);OLED_ShowCN(32,2,7);OLED_ShowStr(48,2, ":", 2);OLED_ShowCN(88,2,25);//显示 距离： 米
+				OLED_ShowCN(16,4,4);OLED_ShowCN(32,4,5);OLED_ShowStr(48,4, ":", 2);OLED_ShowCN(88,4,5);//显示 角度： 度
+		    OLED_ShowStr(0, 6, "scan:", 2);
+		    break;
 
 		case 4: OLED_ShowCN(63,3,21);OLED_ShowCN(79,3,22);break;//显示按键
 
@@ -748,7 +752,7 @@ void OLED_Follow_Data_Display(int New_distance,int New_Angle)
 		else if(Display_dis<=999) {sprintf(buf,"%0.2f",Display_dis/100);}
 			else if(Display_dis<=9999) {sprintf(buf,"%0.1f",Display_dis/100);}
 		else  {sprintf(buf,"%0.2f",Display_dis/100);}
-		OLED_ShowStr(56,3,buf,2);	
+		OLED_ShowStr(56,2,buf,2);	
 	}
 	
 	
@@ -758,7 +762,7 @@ void OLED_Follow_Data_Display(int New_distance,int New_Angle)
 		if(Display_Angle>=9  ) {sprintf(buf," %d ",Display_Angle);}
 		else if(Display_Angle>=99) {sprintf(buf," %d ",Display_Angle);}
 		else  {sprintf(buf," %d ",Display_Angle);}
-		OLED_ShowStr(56,6,buf,2);	
+		OLED_ShowStr(56,4,buf,2);	
 	}
 	else if(Display_Angle !=0xff && abs(Display_Angle)<=99 && Display_Angle<0)
 	{
@@ -766,6 +770,6 @@ void OLED_Follow_Data_Display(int New_distance,int New_Angle)
 		if(Display_Angle>=-9) {sprintf(buf,"%d",Display_Angle);}
 		else if(Display_Angle>=-99) {sprintf(buf,"%d",Display_Angle);}
 		else  {sprintf(buf,"%d",Display_Angle);}
-		OLED_ShowStr(56,6,buf,2);	
+		OLED_ShowStr(56,4,buf,2);	
 	}	
 }

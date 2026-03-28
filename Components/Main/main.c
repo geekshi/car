@@ -1,126 +1,202 @@
 /**********************************************************************************
- * @file	main.c
- * @author	¾ÃÁèµç×Ó 
- * @phone	13566273308(¾ÃÁèµç×Ó-ÌÆ¹¤)
+ * @file        main.c
+ * @author      ä¹…å‡Œç”µå­
+ * @phone       13566273308(ä¹…å‡Œç”µå­ - å”å·¥)
  * @version V3.0.0
- * @date	2023.06.02
- * @brief	¹Ù¸Ä²â¾àÔ´Âë(Ê¹ÓÃ¹Ù·½¿â04.00.06) ÔËĞĞÆ½Ì¨:UWB-S1(²Î¿¼ÏÂÁĞÍøÖ·)
- * @store	https://item.taobao.com/item.htm?spm=a1z10.5-c.w4002-23565193320.10.6e6c3f96tF7wds&id=572212584700
+ * @date        2023.06.02
+ * @brief       å®˜æ”¹æµ‹è·æºç  (ä½¿ç”¨å®˜æ–¹åº“ 04.00.06) è¿è¡Œå¹³å°:UWB-S1(å‚è€ƒä¸‹åˆ—ç½‘å€)
+ * @store       https://item.taobao.com/item.htm?spm=a1z10.5-c.w4002-23565193320.10.6e6c3f96tF7wds&id=572212584700
 **********************************************************************************/
 #include "stm32f10x.h"
 #include "delay.h"
 #include "Periph_init.h"
-#include "timer.h" 
+#include "timer.h"
 #include "hal_usart.h"
 #include "control.h"
 #include "uwb.h"
 #include "hal_iic.h"
 #include "oled_i2c.h"
 #include "motor.h"
+#include <string.h>
+
 extern volatile uint8_t g_barcode_ready;
 extern char g_barcode_buffer[];
 void Barcode_Echo_String(char *str);
+void ShowBarcode(void);
+
+// å•†å“åº“ç»“æ„å®šä¹‰
+#define MAX_ITEM_TYPES 3
+typedef struct
+{
+    char Item[32];  // å•†å“æ¡ç 
+    uint8_t Qty;    // æ•°é‡
+} ItemInfo;
+
+// å•†å“åº“æ•°ç»„ï¼ˆRAM ä¸­ï¼‰
+static ItemInfo g_itemDB[MAX_ITEM_TYPES] = {0};
+static uint8_t g_itemCount = 0;  // å½“å‰å­˜å‚¨çš„å•†å“ç§ç±»æ•°
+
+// æŸ¥æ‰¾å•†å“åœ¨åº“ä¸­çš„ç´¢å¼•ï¼Œä¸å­˜åœ¨åˆ™è¿”å› -1
+static int FindItemIndex(const char *item)
+{
+    for (uint8_t i = 0; i < g_itemCount; i++)
+    {
+        if (strcmp(g_itemDB[i].Item, item) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// æ·»åŠ å•†å“åˆ°åº“ä¸­
+static void AddItemToDB(const char *item)
+{
+    int index = FindItemIndex(item);
+    if (index >= 0)
+    {
+        // å•†å“å·²å­˜åœ¨ï¼Œæ•°é‡ +1
+        g_itemDB[index].Qty++;
+    }
+    else
+    {
+        // å•†å“ä¸å­˜åœ¨ï¼Œæ·»åŠ æ–°å•†å“ï¼ˆæœ€å¤š 3 ç±»ï¼‰
+        if (g_itemCount < MAX_ITEM_TYPES)
+        {
+            strncpy(g_itemDB[g_itemCount].Item, item, 31);
+            g_itemDB[g_itemCount].Item[31] = '\0';
+            g_itemDB[g_itemCount].Qty = 1;
+            g_itemCount++;
+        }
+    }
+}
+
+// æ˜¾ç¤ºå•†å“åº“ä¿¡æ¯
+static void DisplayItemDB(void)
+{
+    OLED_CLS();
+    OLED_ShowStr(0, 0, (unsigned char*)"Item         Qty", 2);
+
+    for (uint8_t i = 0; i < g_itemCount; i++)
+    {
+        char line[32];
+        //sprintf(line, "%d%s %d", i + 1, g_itemDB[i].Item, g_itemDB[i].Qty);
+			  sprintf(line, "%s   %d", g_itemDB[i].Item, g_itemDB[i].Qty);
+        OLED_ShowStr(0, (i + 1) * 2, (unsigned char*)line, 2);
+    }
+}
+
 /*******************************************************************************
 *******************************************************************************/
 void RCC_Configuration_part(void)
 {
-	ErrorStatus HSEStartUpStatus;
-	RCC_ClocksTypeDef RCC_ClockFreq;
+        ErrorStatus HSEStartUpStatus;
+        RCC_ClocksTypeDef RCC_ClockFreq;
 
-	/* ½«RCC¼Ä´æÆ÷ÖØĞÂÉèÖÃÎªÄ¬ÈÏÖµ */
-	RCC_DeInit();
+        /* å°† RCC å¯„å­˜å™¨é‡æ–°è®¾ç½®ä¸ºé»˜è®¤å€¼ */
+        RCC_DeInit();
 
-	/* ´ò¿ªÍâ²¿¸ßËÙÊ±ÖÓ¾§ÕñHSE */
-	RCC_HSEConfig(RCC_HSE_ON);
+        /* æ‰“å¼€å¤–éƒ¨é«˜é€Ÿæ—¶é’Ÿæ™¶æŒ¯ HSE */
+        RCC_HSEConfig(RCC_HSE_ON);
 
-	/* µÈ´ıÍâ²¿¸ßËÙÊ±ÖÓ¾§Õñ¹¤×÷ */
-	HSEStartUpStatus = RCC_WaitForHSEStartUp();
+        /* ç­‰å¾…å¤–éƒ¨é«˜é€Ÿæ—¶é’Ÿæ™¶æŒ¯å·¥ä½œ */
+        HSEStartUpStatus = RCC_WaitForHSEStartUp();
 
-	if(HSEStartUpStatus != ERROR)
-	{
-		/* ¿ªÆôFlashÔ¤¶Á»º³å¹¦ÄÜ,Ê±ÖÓÆğÕñºóÊ¹ÓÃ */
-		FLASH_PrefetchBufferCmd(FLASH_PrefetchBuffer_Enable);
+        if(HSEStartUpStatus != ERROR)
+        {
+                /* å¼€å¯ Flash é¢„è¯»ç¼“å†²åŠŸèƒ½ï¼Œæ—¶é’Ÿèµ·æŒ¯åä½¿ç”¨ */
+                FLASH_PrefetchBufferCmd(FLASH_PrefetchBuffer_Enable);
 
-		/* 48~72MhzÍÆ¼öLatencyÎª2 */
-		FLASH_SetLatency(FLASH_Latency_2);
+                /* 48~72Mhz æ¨è Latency ä¸º 2 */
+                FLASH_SetLatency(FLASH_Latency_2);
 
-		/* ÉèÖÃAHBÊ±ÖÓ£¬72MHz HCLK = SYSCLK */
-		RCC_HCLKConfig(RCC_SYSCLK_Div1);
-		/* ÉèÖÃ¸æËßAPB2Ê±ÖÓ£¬1·ÖÆµ72MHz PCLK2 = HCLK */
-		RCC_PCLK2Config(RCC_HCLK_Div1);
-		/* ÉèÖÃµÍËÙAPB1Ê±ÖÓ£¬2·ÖÆµ36MHz PCLK1 = HCLK/2 */
-		RCC_PCLK1Config(RCC_HCLK_Div2);
-		/*  ÉèÖÃADCÊ±ÖÓ ADCCLK = PCLK2/4 */
-		RCC_ADCCLKConfig(RCC_PCLK2_Div6);
+                /* è®¾ç½® AHB æ—¶é’Ÿï¼Œ72MHz HCLK = SYSCLK */
+                RCC_HCLKConfig(RCC_SYSCLK_Div1);
+                /* è®¾ç½®å‘Šè¯‰ APB2 æ—¶é’Ÿï¼Œ1 åˆ†é¢‘ 72MHz PCLK2 = HCLK */
+                RCC_PCLK2Config(RCC_HCLK_Div1);
+                /* è®¾ç½®ä½é€Ÿ APB1 æ—¶é’Ÿï¼Œ2 åˆ†é¢‘ 36MHz PCLK1 = HCLK/2 */
+                RCC_PCLK1Config(RCC_HCLK_Div2);
+                /*  è®¾ç½® ADC æ—¶é’Ÿ ADCCLK = PCLK2/4 */
+                RCC_ADCCLKConfig(RCC_PCLK2_Div6);
 
-		//ÉèÖÃPLLÊ±ÖÓÔ´¼°±¶ÆµÏµÊı ²»·ÖÆµ£ºRCC_PLLSource_HSE_Div1 9±¶Æµ£ºRCC_PLLMul_9
-		RCC_PLLConfig(RCC_PLLSource_HSE_Div1, RCC_PLLMul_9);
-		/* ´ò¿ªPLL */
-		RCC_PLLCmd(ENABLE);
-		/* µÈ´ıPLLÎÈ¶¨¹¤×÷ */
-		while (RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET){}
+                //è®¾ç½® PLL æ—¶é’ŸæºåŠå€é¢‘ç³»æ•° ä¸åˆ†é¢‘ï¼šRCC_PLLSource_HSE_Div1 9 å€é¢‘ï¼šRCC_PLLMul_9
+                RCC_PLLConfig(RCC_PLLSource_HSE_Div1, RCC_PLLMul_9);
+                /* æ‰“å¼€ PLL */
+                RCC_PLLCmd(ENABLE);
+                /* ç­‰å¾… PLL ç¨³å®šå·¥ä½œ */
+                while (RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET){}
 
-		/* Ñ¡ÔñPLLÊ±ÖÓ×÷ÎªÊ±ÖÓÔ´ */
-		RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+                /* é€‰æ‹© PLL æ—¶é’Ÿä½œä¸ºæ—¶é’Ÿæº */
+                RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
 
-		/* µÈ´ıÊ±ÖÓÔ´ÇĞ»»£¬½øÈëÎÈ¶¨×´Ì¬ */
-		while (RCC_GetSYSCLKSource() != 0x08){}
-	}
+                /* ç­‰å¾…æ—¶é’Ÿæºåˆ‡æ¢ï¼Œè¿›å…¥ç¨³å®šçŠ¶æ€ */
+                while (RCC_GetSYSCLKSource() != 0x08){}
+        }
 
-	RCC_GetClocksFreq(&RCC_ClockFreq);
+        RCC_GetClocksFreq(&RCC_ClockFreq);
 }
 
 /*******************************************************************************
-* º¯ÊıÃû  : init
-* ÃèÊö    : ³õÊ¼»¯º¯Êı
-* ÊäÈë    : ÎŞ
-* Êä³ö    : ÎŞ
-* ·µ»ØÖµ  : ÎŞ
+* å‡½æ•°å  : init
+* æè¿°    : åˆå§‹åŒ–å‡½æ•°
+* è¾“å…¥    : æ— 
+* è¾“å‡º    : æ— 
+* è¿”å›å€¼  : æ— 
 *******************************************************************************/
 void init(void)
 {
-	//³õÊ¼»¯ÉèÖÃ
-	SystemInit();
-	RCC_Configuration_part();
-	SysTick_Init();      //àÖàª¶¨Ê±              
-	Periph_init();       //Ö¸Ê¾µÆ+·äÃùÆ÷³õÊ¼»¯
-	Timer_Init();        //¶¨Ê±Æ÷³õÊ¼»¯ÉèÖÃ
-	Uart_Queue_Init();   //PDOAÊı¾İ¶ÓÁĞ³õÊ¼»¯
-	HalUARTInit();       //´®¿Ú1+´®¿Ú2ÉèÖÃ
-	OLED_Configuration();//ÆÁÄ»³õÊ¼»¯Óë³õÊ¼´òÓ¡
-	EXTI_ALL_Init();     //±àÂëÆ÷IO³õÊ¼»¯
-	Motor_Gpio_init();   //Âí´ïµç»úIO¿Ú³õÊ¼»¯
+        //åˆå§‹åŒ–è®¾ç½®
+        SystemInit();
+        RCC_Configuration_part();
+        SysTick_Init();      //å˜€å—’å®šæ—¶
+        Periph_init();       //æŒ‡ç¤ºç¯ + èœ‚é¸£å™¨åˆå§‹åŒ–
+        Timer_Init();        //å®šæ—¶å™¨åˆå§‹åŒ–è®¾ç½®
+        Uart_Queue_Init();   //PDOA æ•°æ®é˜Ÿåˆ—åˆå§‹åŒ–
+        HalUARTInit();       //ä¸²å£ 1+ ä¸²å£ 2 è®¾ç½®
+        OLED_Configuration();//å±å¹•åˆå§‹åŒ–ä¸åˆå§‹æ‰“å°
+        EXTI_ALL_Init();     //ç¼–ç å™¨ IO åˆå§‹åŒ–
+        Motor_Gpio_init();   //é©¬è¾¾ç”µæœº IO å£åˆå§‹åŒ–
 }
 
 
 /*******************************************************************************
-* º¯ÊıÃû  : main
-* ÃèÊö    : Ö÷º¯Êı
-* ÊäÈë    : ÎŞ
-* Êä³ö    : ÎŞ
-* ·µ»ØÖµ  : ÎŞ
+* å‡½æ•°å  : main
+* æè¿°    : ä¸»å‡½æ•°
+* è¾“å…¥    : æ— 
+* è¾“å‡º    : æ— 
+* è¿”å›å€¼  : æ— 
 ********************************************************************************/
 int main(void)
 {
-	init();
-	while(1)
-	{
-		Read_AoA_Control();
-		if (g_barcode_ready == 1)
+        init();
+        while(1)
         {
-            g_barcode_ready = 0;
-						//OLED print
-            I2C_GenerateSTOP(I2C2, ENABLE);
-            I2C_DeInit(I2C2);
-            RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2,DISABLE);
-            IIC_Init();
-					  OLED_CLS();
-            OLED_ShowStr(0, 3, (char*)g_barcode_buffer, 2);
-					  Delay_ms(2000);
-					  OLED_display(3);
-            //Barcode_Echo_String((char*)g_barcode_buffer);
+                Read_AoA_Control();
+                if (g_barcode_ready == 1)
+								{
+										g_barcode_ready = 0;
+										ShowBarcode();
+								}
         }
-	}
+}
+
+void ShowBarcode(void)
+{
+		I2C_GenerateSTOP(I2C2, ENABLE);
+		I2C_DeInit(I2C2);
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2,DISABLE);
+		IIC_Init();
+		OLED_CLS();
+		OLED_ShowStr(0, 3, (char*)g_barcode_buffer, 2);
+		Delay_ms(2000);
+		OLED_display(3);
+
+		// å°†æ¡ç ä¿¡æ¯æ·»åŠ è‡³å•†å“åº“ï¼ˆæœ€å¤šå­˜å‚¨ 3 ç±»å•†å“ï¼‰
+		AddItemToDB(g_barcode_buffer);
+		// åˆ·å±å¹¶æ˜¾ç¤ºå•†å“åº“ä¸­æ‰€æœ‰å•†å“ä¿¡æ¯ï¼Œä¿ç•™ 3 ç§’
+		DisplayItemDB();
+		Delay_ms(3000);  // ä¿ç•™ 3 ç§’
+		OLED_display(3);
 }
 
 void Barcode_Echo_String(char *str)
@@ -136,6 +212,6 @@ void Barcode_Echo_String(char *str)
     while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
     USART_SendData(UART4, 0x0A);
     while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
-    
+
     while (USART_GetFlagStatus(UART4, USART_FLAG_TC) == RESET);
 }

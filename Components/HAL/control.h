@@ -3,123 +3,123 @@
 
 
 /***************************************************************************************************
- * ¸úËæºê¶¨Òå
+ * ê¶¨
  ***************************************************************************************************/
-#define BUFFER_SIZE 100      //»º³åÊý×é´óÐ¡
-//ÓÉÓÚ TOF²â¾à Óë OLEDÓ²¼þIIC³åÍ» ¶þÕßÖ»ÄÜÑ¡ÆäÒ»
-#define OLED_OR_TOF    0//0 Ö»ÊÇÓÃ OLED    1 Ö»Ê¹ÓÃ TOF
+#define BUFFER_SIZE 100      //
+// TOF  OLEDÓ²IIC Ö»Ñ¡Ò»
+#define OLED_OR_TOF    0//0 Ö» OLED    1 Ö»Ê¹ TOF
 
 typedef enum {
-	
-    FULL_ON      = 0,  // ¿ÕÎ´ÓÐ×´Ì¬
-	//·½Ïò±êÖ¾Î»ÅÐ¶Ï
-    FRONT        = 1,  // ÕýÇ°·½    1
-    BACK,              // Õýºó·½    2
-	SIDE,              // ²à·½      3
-    LEFT_SIDE,         // ×ó²à±ß    4
-    RIGHT_SIDE,        // ÓÒ²à±ß    5
-    FRONT_HALF,        // Ç°°ë²¿    6
-    REAR_HALF,         // ºó°ë²¿    7
-	
-	//±êÇ©Î»ÖÃÅÐ¶Ï
-    TAG_FRONT,         // ÕýÇ°·½                                          8
-    TAG_BACK,          // Õýºó·½                                          9
-    TAG_LEFT_FRONT,    // ×óÇ°·½£¨ LEFT_SIDE Óë FRONT_HALF µÄ½áºÏ·½Ïò£©   10
-    TAG_LEFT_BACK,     // ×óºó·½£¨ LEFT_SIDE Óë REAR_HALF µÄ½áºÏ·½Ïò£©    11
-    TAG_RIGHT_FRONT,   // ÓÒÇ°·½£¨ RIGHT_SIDE Óë FRONT_HALF µÄ½áºÏ·½Ïò£©  12
-    TAG_RIGHT_BACK,    // ÓÒºó·½£¨ RIGHT_SIDE Óë REAR_HALF µÄ½áºÏ·½Ïò£©   13
-} Tag_Position;//±êÇ©Î»ÖÃÅÐ¶Ï ±êÖ¾Î»¶¨Òå
+
+    FULL_ON      = 0,  // ×´Ì¬
+        //Î»
+    FRONT        = 1,  // Ç°    1
+    BACK,              //     2
+        SIDE,              //       3
+    LEFT_SIDE,         //     4
+    RIGHT_SIDE,        //     5
+    FRONT_HALF,        // Ç°ë²¿    6
+    REAR_HALF,         //     7
+
+        //Î»
+    TAG_FRONT,         // Ç°                                          8
+    TAG_BACK,          //                                           9
+    TAG_LEFT_FRONT,    // Ç° LEFT_SIDE  FRONT_HALF Ä½   10
+    TAG_LEFT_BACK,     // ó·½£ LEFT_SIDE  REAR_HALF Ä½    11
+    TAG_RIGHT_FRONT,   // Ç° RIGHT_SIDE  FRONT_HALF Ä½  12
+    TAG_RIGHT_BACK,    // ó·½£ RIGHT_SIDE  REAR_HALF Ä½   13
+} Tag_Position;//Î» Î»
 
 typedef enum {
-	NO_ACTION = 0,          // ²»Ö´ÐÐ
-    RCSF = 1,               //Ò£¿ØÖ±ÐÐ        1
-    FOLLOW_STRAIGHT,        //¸úËæÖ±ÐÐ        2
+        NO_ACTION = 0,          // Ö´
+    RCSF = 1,               //Ò£        1
+    FOLLOW_STRAIGHT,        //Ö±        2
     STOP_MOTOR,             //Í£Ö¹            3
-    BACKWARD,               // ºóÍË           4
-    SPOT_LEFT_TURN,         // Ô­µØ×ó×ª       5
-    SPOT_RIGHT_TURN,        // Ô­µØÓÒ×ª       6
-    LEFT_TURN,              //×ó×ª            7
-    RIGHT_TURN,             //ÓÒ×ª            8
-    FOLLOW_CAR,             //¸úËæ            9
-    LEFT_BACKWARD,          //×óµ¹³µ          10
-    RIGHT_BACKWARD,         //ÓÒµ¹³µ          11
-} TurnDirection;//¶¨Òå×ªÏòÖ¸ÁîµÄÃ¶¾Ù
+    BACKWARD,               //            4
+    SPOT_LEFT_TURN,         // Ô­       5
+    SPOT_RIGHT_TURN,        // Ô­       6
+    LEFT_TURN,              //×ª            7
+    RIGHT_TURN,             //×ª            8
+    FOLLOW_CAR,             //            9
+    LEFT_BACKWARD,          //          10
+    RIGHT_BACKWARD,         //          11
+} TurnDirection;//×ªÖ¸Ã¶
 
 typedef enum {
-    NO_FULL = 0,          //¿Õ              0
-    Lock_mode,            //ËøÄ£Ê½          1
-    Follow_mode,          //¸úËæÄ£Ê½        2
-    Recall_mode,          //ÕÙ»ØÄ£Ê½        3
-    Remote_mode,          //Ò£¿ØÄ£Ê½        4
-} CarMode;//³µÁ¾Ä£Ê½ ¸ù¾ÝÒ£¿ØÉèÖÃ£¬Èç¹ûÊÇÆäËü±êÇ©Ä£Ê½Ö»Îª¸úËæÄ£Ê½
+    NO_FULL = 0,          //              0
+    Lock_mode,            //Ä£Ê½          1
+    Follow_mode,          //Ä£Ê½        2
+    Recall_mode,          //Ê½        3
+    Remote_mode,          //Ò£Ê½        4
+} CarMode;//Ä£Ê½ Ä£Ê½Ö»ÎªÄ£Ê½
 
 typedef struct {
-    float x;  // ×´Ì¬¹À¼ÆÖµ
-    float p;  // ¹À¼ÆÎó²îÐ­·½²î
-    float q;  // ¹ý³ÌÔëÉùÐ­·½²î£¨½¨ÒéÖµ0.01-0.1£©
-    float r;  // ²âÁ¿ÔëÉùÐ­·½²î£¨½¨ÒéÖµ0.5-2.0£©
+    float x;  // ×´Ì¬
+    float p;  //
+    float q;  // Ð­î£¨Öµ0.01-0.1
+    float r;  // Ð­î£¨Öµ0.5-2.0
 } KalmanState;
 /***************************************************************************************************
- * ¸úËæÊý¾Ý
+ *
  ***************************************************************************************************/
 #pragma pack(push, 1)
 
 
 typedef struct
 {
-	uint32_t is_lowbattery:1;			//ÊÇ·ñµÍµçÁ¿±¨¾¯
-	uint32_t is_alarm:1;				//ÊÇ·ñ±¨¾¯
-	uint32_t is_chrg:1;					//ÊÇ·ñ³äµç
-	uint32_t is_tdby:1;					//ÊÇ·ñ³äÂú
-	uint32_t battery_val:10;			//µç³ØµçÑ¹350=3.50V
-	uint32_t is_offset_range_zero_bit:1;//¾àÀëÐ£ÕýÎ»
-	uint32_t is_offset_pdoa_zero_bit:1;	//½Ç¶ÈÐ£ÕýÎ»
+        uint32_t is_lowbattery:1;                       //
+        uint32_t is_alarm:1;                            //
+        uint32_t is_chrg:1;                                     //
+        uint32_t is_tdby:1;                                     //
+        uint32_t battery_val:10;                        //350=3.50V
+        uint32_t is_offset_range_zero_bit:1;//Ð£Î»
+        uint32_t is_offset_pdoa_zero_bit:1;     //Ç¶Î»
 
-	uint32_t turn_up:1;					//(Ò£¿Ø×¨ÓÃ)ÏòÇ°
-	uint32_t turn_down:1;				//(Ò£¿Ø×¨ÓÃ)Ïòºó
-	uint32_t turn_left:1;				//(Ò£¿Ø×¨ÓÃ)Ïò×ó
-	uint32_t turn_right:1;			    //(Ò£¿Ø×¨ÓÃ)ÏòÓÒ
-	uint32_t mode:3;					//(Ò£¿Ø×¨ÓÃ)Ä£Ê½
-	uint32_t recal:1;					//(Ò£¿Ø×¨ÓÃ)ÕÙ»Ø
-	uint32_t lock:1;					//(Ò£¿Ø×¨ÓÃ)ÉÏËø
-	
-	uint32_t dev_type:3;				//Éè±¸ÀàÐÍ(0:Ñ§Ï°°å 1:ÊÖ»· 2:Ò£¿ØÆ÷)
-	uint32_t reserve:4;					//Ô¤Áô
-}Aoa_Detail_Para_t;//Ò£¿ØÃüÁî½á¹¹Ìå
+        uint32_t turn_up:1;                                     //(Ò£)Ç°
+        uint32_t turn_down:1;                           //(Ò£)
+        uint32_t turn_left:1;                           //(Ò£)
+        uint32_t turn_right:1;                      //(Ò£)
+        uint32_t mode:3;                                        //(Ò£)Ä£Ê½
+        uint32_t recal:1;                                       //(Ò£)
+        uint32_t lock:1;                                        //(Ò£)
+
+        uint32_t dev_type:3;                            //(0:Ñ§Ï° 1: 2:Ò£)
+        uint32_t reserve:4;                                     //Ô¤
+}Aoa_Detail_Para_t;//Ò£
 
 typedef struct
 {
-	int      Angle_filter;    //×îÖÕ½Ç¶È
-	int      Distance_filter; //×îÖÕ¾àÀë
+        int      Angle_filter;    //Ç¶
+        int      Distance_filter; //
 
-	struct{
-		int16_t angle;					//½Ç¶È(¡ã)
-		uint16_t range;					//¾àÀë(cm)
-	}tag_tof_Ax[4];//AOA´øÐÅºÅÇ¿¶ÈµÄÊý¾Ý
-	
-	struct{
-		int16_t angle;					//½Ç¶È(¡ã)
-		uint16_t range;					//¾àÀë(cm)
-		int16_t  rssi;					//ÐÅºÅÇ¿¶È
-	}More_tag_tof_Ax[4];//AOA ²»´øÐÅºÅÇ¿¶ÈµÄÊý¾Ý
-	
-	Aoa_Detail_Para_t  Aoa_para_t;//Ò£¿Ø²ÎÊý
-	
-	uint8_t Remote_control;//Ò£¿Ø°´¼ü¿ØÖÆ ±íÊ¾ÄÄÒ»¸ö°´¼ü°´ÏÂ
-	uint8_t Car_mode;      //Ò£¿ØÄ£Ê½
-	
-	uint8_t Tag_LR;//¶à»ùÕ¾±êÇ©·½ÏòÅÐ¶Ï  ÔÚ×ó»¹ÊÇÔÚÓÒ£¬ÅÐ¶Ï³µÁ¾ÐèÒªÏòÓÒ»¹ÊÇÊÇÏò×ó×ª
-	uint8_t Tof_Directions;   //±ÜÕÏÎ»ÖÃ
-	
-	uint16_t Car_Speed;
-	
+        struct{
+                int16_t angle;                                  //Ç¶()
+                uint16_t range;                                 //(cm)
+        }tag_tof_Ax[4];//AOAÈµ
+
+        struct{
+                int16_t angle;                                  //Ç¶()
+                uint16_t range;                                 //(cm)
+                int16_t  rssi;                                  //
+        }More_tag_tof_Ax[4];//AOA Èµ
+
+        Aoa_Detail_Para_t  Aoa_para_t;//Ò£Ø²
+
+        uint8_t Remote_control;//Ò£Ø° Ò»
+        uint8_t Car_mode;      //Ò£Ê½
+
+        uint8_t Tag_LR;//Õ¾  Ï³Òª×ª
+        uint8_t Tof_Directions;   //
+
+        uint16_t Car_Speed;
+
 }AOA_DATA;
 #pragma pack(pop)
 
 extern AOA_DATA AVG;
 
 /***************************************************************************************************
- * ¸úËæ¿ØÖÆº¯Êý
+ * Æº
  ***************************************************************************************************/
 //void follow_car_task(void);
 void Read_AoA_Control(void);
@@ -128,3 +128,6 @@ void car_motor_speed (int distance);
 int AOA_Angle_difference(int Angle);
 int AOA_final_angle (int Angle_difference,int Angle );
 int car_distance (int AOA_distance);
+
+// É¨Ç¹Øº
+void Barcode_ProcessAndEcho(void);

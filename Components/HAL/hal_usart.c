@@ -191,6 +191,6 @@ HalUSART2_Init(115200);
 HalUASRT2_NVIC_Config();
 
 HalUSART4_IO_Init();
-HalUSART4_Init(9600);
+HalUSART4_Init(115200);
 HalUASRT4_NVIC_Config();
 }

@@ -17,74 +17,7 @@
 #include "hal_iic.h"
 #include "oled_i2c.h"
 #include "motor.h"
-#include <string.h>
 
-extern volatile uint8_t g_barcode_ready;
-extern char g_barcode_buffer[];
-void Barcode_Echo_String(char *str);
-void ShowBarcode(void);
-
-// 商品库结构定义
-#define MAX_ITEM_TYPES 3
-typedef struct
-{
-    char Item[32];  // 商品条码
-    uint8_t Qty;    // 数量
-} ItemInfo;
-
-// 商品库数组（RAM 中）
-static ItemInfo g_itemDB[MAX_ITEM_TYPES] = {0};
-static uint8_t g_itemCount = 0;  // 当前存储的商品种类数
-
-// 查找商品在库中的索引，不存在则返回 -1
-static int FindItemIndex(const char *item)
-{
-    for (uint8_t i = 0; i < g_itemCount; i++)
-    {
-        if (strcmp(g_itemDB[i].Item, item) == 0)
-        {
-            return i;
-        }
-    }
-    return -1;
-}
-
-// 添加商品到库中
-static void AddItemToDB(const char *item)
-{
-    int index = FindItemIndex(item);
-    if (index >= 0)
-    {
-        // 商品已存在，数量 +1
-        g_itemDB[index].Qty++;
-    }
-    else
-    {
-        // 商品不存在，添加新商品（最多 3 类）
-        if (g_itemCount < MAX_ITEM_TYPES)
-        {
-            strncpy(g_itemDB[g_itemCount].Item, item, 31);
-            g_itemDB[g_itemCount].Item[31] = '\0';
-            g_itemDB[g_itemCount].Qty = 1;
-            g_itemCount++;
-        }
-    }
-}
-
-// 显示商品库信息
-static void DisplayItemDB(void)
-{
-    OLED_CLS();
-    OLED_ShowStr(0, 0, (unsigned char*)"Item         Qty", 2);
-
-    for (uint8_t i = 0; i < g_itemCount; i++)
-    {
-        char line[32];
-        //sprintf(line, "%d%s %d", i + 1, g_itemDB[i].Item, g_itemDB[i].Qty);
-			  sprintf(line, "%s   %d", g_itemDB[i].Item, g_itemDB[i].Qty);
-        OLED_ShowStr(0, (i + 1) * 2, (unsigned char*)line, 2);
-    }
-}
 
 /*******************************************************************************
 *******************************************************************************/
@@ -172,46 +105,5 @@ int main(void)
         while(1)
         {
                 Read_AoA_Control();
-                if (g_barcode_ready == 1)
-								{
-										g_barcode_ready = 0;
-										ShowBarcode();
-								}
         }
-}
-
-void ShowBarcode(void)
-{
-		I2C_GenerateSTOP(I2C2, ENABLE);
-		I2C_DeInit(I2C2);
-		RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2,DISABLE);
-		IIC_Init();
-		OLED_CLS();
-		OLED_ShowStr(0, 3, (char*)g_barcode_buffer, 2);
-		Delay_ms(2000);
-		OLED_display(3);
-
-		// 将条码信息添加至商品库（最多存储 3 类商品）
-		AddItemToDB(g_barcode_buffer);
-		// 刷屏并显示商品库中所有商品信息，保留 3 秒
-		DisplayItemDB();
-		Delay_ms(3000);  // 保留 3 秒
-		OLED_display(3);
-}
-
-void Barcode_Echo_String(char *str)
-{
-    char *p = str;
-    while (*p)
-    {
-        USART_SendData(UART4, *p);
-        while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
-        p++;
-    }
-    USART_SendData(UART4, 0x0D);
-    while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
-    USART_SendData(UART4, 0x0A);
-    while (USART_GetFlagStatus(UART4, USART_FLAG_TXE) == RESET);
-
-    while (USART_GetFlagStatus(UART4, USART_FLAG_TC) == RESET);
 }

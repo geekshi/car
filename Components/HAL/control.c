@@ -513,4 +513,6 @@ void Read_AoA_Control(void)
                 AVG.Tof_Directions=Oled_And_Tof_Control(AVG.Angle_filter,AVG.Distance_filter,AVG.Car_mode);
                 if(AVG.Tof_Directions != 0){LED1(ON);}else {LED1(OFF);}//ǰʱLED1
         }
+
+        //Barcode_ProcessAndEcho();
 }
